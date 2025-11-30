@@ -2,7 +2,7 @@
   "name": "animals",
   "version": "1.0.0",
   "description": "CatMatch Animals MicroService",
-  "license": "ISC",
+  "license": "MIT",
   "author": "jj-int-dev",
   "type": "module",
   "main": "dist/server.js",
