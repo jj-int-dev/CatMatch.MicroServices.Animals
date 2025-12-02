@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import config from './config/config';
 import animalRoutes from './routes/animalRoutes';
+import rehomerRoutes from './routes/rehomerRoutes';
 import swaggerOptions from './config/swaggerOptions';
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
@@ -29,6 +30,7 @@ app.use(cors(corsOptions));
 
 // Routes
 app.use('/api/animals', animalRoutes);
+app.use('/api/rehomers', rehomerRoutes);
 
 // Swagger
 app.use(

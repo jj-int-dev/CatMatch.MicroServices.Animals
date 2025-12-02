@@ -29,7 +29,7 @@ export default async function (
       .status(401)
       .json({ message: 'Insufficient access to make animal updates' });
   } catch (err) {
-    console.log(`Error during user update access check middleware: ${err}`);
+    console.log(`Error during animal update access check middleware: ${err}`);
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 }

@@ -1,13 +1,13 @@
 import {
   pgTable,
   pgSchema,
+  uniqueIndex,
   index,
+  foreignKey,
   check,
   uuid,
   text,
   timestamp,
-  uniqueIndex,
-  foreignKey,
   jsonb,
   boolean,
   varchar,
@@ -15,12 +15,11 @@ import {
   smallint,
   json,
   inet,
-  serial,
-  date,
-  integer,
-  unique,
-  real,
   bigint,
+  date,
+  unique,
+  integer,
+  real,
   numeric
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
@@ -40,10 +39,21 @@ export const factorTypeInAuth = auth.enum('factor_type', [
   'webauthn',
   'phone'
 ]);
+export const oauthAuthorizationStatusInAuth = auth.enum(
+  'oauth_authorization_status',
+  ['pending', 'approved', 'denied', 'expired']
+);
+export const oauthClientTypeInAuth = auth.enum('oauth_client_type', [
+  'public',
+  'confidential'
+]);
 export const oauthRegistrationTypeInAuth = auth.enum(
   'oauth_registration_type',
   ['dynamic', 'manual']
 );
+export const oauthResponseTypeInAuth = auth.enum('oauth_response_type', [
+  'code'
+]);
 export const oneTimeTokenTypeInAuth = auth.enum('one_time_token_type', [
   'confirmation_token',
   'reauthentication_token',
@@ -52,48 +62,6 @@ export const oneTimeTokenTypeInAuth = auth.enum('one_time_token_type', [
   'email_change_token_current',
   'phone_change_token'
 ]);
-
-export const oauthClientsInAuth = auth.table(
-  'oauth_clients',
-  {
-    id: uuid().notNull(),
-    clientId: text('client_id').notNull(),
-    clientSecretHash: text('client_secret_hash').notNull(),
-    registrationType:
-      oauthRegistrationTypeInAuth('registration_type').notNull(),
-    redirectUris: text('redirect_uris').notNull(),
-    grantTypes: text('grant_types').notNull(),
-    clientName: text('client_name'),
-    clientUri: text('client_uri'),
-    logoUri: text('logo_uri'),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
-      .defaultNow()
-      .notNull(),
-    deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' })
-  },
-  (table) => [
-    index('oauth_clients_client_id_idx').using(
-      'btree',
-      table.clientId.asc().nullsLast().op('text_ops')
-    ),
-    index('oauth_clients_deleted_at_idx').using(
-      'btree',
-      table.deletedAt.asc().nullsLast().op('timestamptz_ops')
-    ),
-    check(
-      'oauth_clients_client_name_length',
-      sql`char_length(client_name) <= 1024`
-    ),
-    check(
-      'oauth_clients_client_uri_length',
-      sql`char_length(client_uri) <= 2048`
-    ),
-    check('oauth_clients_logo_uri_length', sql`char_length(logo_uri) <= 2048`)
-  ]
-);
 
 export const ssoDomainsInAuth = auth.table(
   'sso_domains',
@@ -116,6 +84,46 @@ export const ssoDomainsInAuth = auth.table(
       name: 'sso_domains_sso_provider_id_fkey'
     }).onDelete('cascade'),
     check('domain not empty', sql`char_length(domain) > 0`)
+  ]
+);
+
+export const oauthClientsInAuth = auth.table(
+  'oauth_clients',
+  {
+    id: uuid().notNull(),
+    clientSecretHash: text('client_secret_hash'),
+    registrationType:
+      oauthRegistrationTypeInAuth('registration_type').notNull(),
+    redirectUris: text('redirect_uris').notNull(),
+    grantTypes: text('grant_types').notNull(),
+    clientName: text('client_name'),
+    clientUri: text('client_uri'),
+    logoUri: text('logo_uri'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true, mode: 'string' }),
+    clientType: oauthClientTypeInAuth('client_type')
+      .default('confidential')
+      .notNull()
+  },
+  (table) => [
+    index('oauth_clients_deleted_at_idx').using(
+      'btree',
+      table.deletedAt.asc().nullsLast().op('timestamptz_ops')
+    ),
+    check(
+      'oauth_clients_client_name_length',
+      sql`char_length(client_name) <= 1024`
+    ),
+    check(
+      'oauth_clients_client_uri_length',
+      sql`char_length(client_uri) <= 2048`
+    ),
+    check('oauth_clients_logo_uri_length', sql`char_length(logo_uri) <= 2048`)
   ]
 );
 
@@ -211,7 +219,8 @@ export const mfaFactorsInAuth = auth.table(
       mode: 'string'
     }),
     webAuthnCredential: jsonb('web_authn_credential'),
-    webAuthnAaguid: uuid('web_authn_aaguid')
+    webAuthnAaguid: uuid('web_authn_aaguid'),
+    lastWebauthnChallengeData: jsonb('last_webauthn_challenge_data')
   },
   (table) => [
     index('factor_id_created_at_idx').using(
@@ -468,43 +477,6 @@ export const samlRelayStatesInAuth = auth.table(
   ]
 );
 
-export const sessionsInAuth = auth.table(
-  'sessions',
-  {
-    id: uuid().notNull(),
-    userId: uuid('user_id').notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }),
-    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }),
-    factorId: uuid('factor_id'),
-    aal: aalLevelInAuth(),
-    notAfter: timestamp('not_after', { withTimezone: true, mode: 'string' }),
-    refreshedAt: timestamp('refreshed_at', { mode: 'string' }),
-    userAgent: text('user_agent'),
-    ip: inet(),
-    tag: text()
-  },
-  (table) => [
-    index('sessions_not_after_idx').using(
-      'btree',
-      table.notAfter.desc().nullsFirst().op('timestamptz_ops')
-    ),
-    index('sessions_user_id_idx').using(
-      'btree',
-      table.userId.asc().nullsLast().op('uuid_ops')
-    ),
-    index('user_id_created_at_idx').using(
-      'btree',
-      table.userId.asc().nullsLast().op('uuid_ops'),
-      table.createdAt.asc().nullsLast().op('timestamptz_ops')
-    ),
-    foreignKey({
-      columns: [table.userId],
-      foreignColumns: [usersInAuth.id],
-      name: 'sessions_user_id_fkey'
-    }).onDelete('cascade')
-  ]
-);
-
 export const mfaAmrClaimsInAuth = auth.table(
   'mfa_amr_claims',
   {
@@ -670,76 +642,66 @@ export const mfaChallengesInAuth = auth.table(
   ]
 );
 
-export const userTypes = pgTable('usertypes', {
-  userTypeId: serial('user_type_id').primaryKey().notNull(),
-  type: varchar({ length: 100 }).notNull()
-});
-
-export const users = pgTable(
-  'users',
+export const sessionsInAuth = auth.table(
+  'sessions',
   {
-    email: varchar({ length: 100 }).notNull(),
-    phoneNumber: varchar('phone_number', { length: 100 }),
-    displayName: varchar('display_name', { length: 300 }),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
-    dateOfBirth: date('date_of_birth'),
-    avatarUrl: text('avatar_url'),
-    bio: text(),
-    userTypeId: integer('user_type_id'),
-    gender: varchar(),
-    userId: uuid('user_id').defaultRandom().primaryKey().notNull()
+    id: uuid().notNull(),
+    userId: uuid('user_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }),
+    factorId: uuid('factor_id'),
+    aal: aalLevelInAuth(),
+    notAfter: timestamp('not_after', { withTimezone: true, mode: 'string' }),
+    refreshedAt: timestamp('refreshed_at', { mode: 'string' }),
+    userAgent: text('user_agent'),
+    ip: inet(),
+    tag: text(),
+    oauthClientId: uuid('oauth_client_id'),
+    refreshTokenHmacKey: text('refresh_token_hmac_key'),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    refreshTokenCounter: bigint('refresh_token_counter', { mode: 'number' }),
+    scopes: text()
   },
   (table) => [
+    index('sessions_not_after_idx').using(
+      'btree',
+      table.notAfter.desc().nullsFirst().op('timestamptz_ops')
+    ),
+    index('sessions_oauth_client_id_idx').using(
+      'btree',
+      table.oauthClientId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('sessions_user_id_idx').using(
+      'btree',
+      table.userId.asc().nullsLast().op('uuid_ops')
+    ),
+    index('user_id_created_at_idx').using(
+      'btree',
+      table.userId.asc().nullsLast().op('uuid_ops'),
+      table.createdAt.asc().nullsLast().op('timestamptz_ops')
+    ),
+    foreignKey({
+      columns: [table.oauthClientId],
+      foreignColumns: [oauthClientsInAuth.id],
+      name: 'sessions_oauth_client_id_fkey'
+    }).onDelete('cascade'),
     foreignKey({
       columns: [table.userId],
       foreignColumns: [usersInAuth.id],
-      name: 'users_user_id_fkey'
-    })
-      .onUpdate('cascade')
-      .onDelete('cascade'),
-    foreignKey({
-      columns: [table.userTypeId],
-      foreignColumns: [userTypes.userTypeId],
-      name: 'users_user_type_id_fkey'
-    })
-      .onUpdate('cascade')
-      .onDelete('set null')
+      name: 'sessions_user_id_fkey'
+    }).onDelete('cascade'),
+    check('sessions_scopes_length', sql`char_length(scopes) <= 4096`)
   ]
 );
 
-export const messages = pgTable(
-  'messages',
-  {
-    messageId: serial('message_id').primaryKey().notNull(),
-    conversationId: integer('conversation_id'),
-    content: text().notNull(),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
-    senderId: uuid('sender_id').notNull()
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.senderId],
-      foreignColumns: [users.userId],
-      name: 'fk_messages_users'
-    }),
-    foreignKey({
-      columns: [table.conversationId],
-      foreignColumns: [conversations.conversationId],
-      name: 'messages_conversation_id_fkey'
-    })
-  ]
-);
+export const usertypes = pgTable('usertypes', {
+  type: varchar({ length: 100 }).notNull(),
+  userTypeId: uuid('user_type_id').defaultRandom().primaryKey().notNull()
+});
 
 export const conversations = pgTable(
   'conversations',
   {
-    conversationId: serial('conversation_id').primaryKey().notNull(),
     rehomerLastActiveAt: timestamp('rehomer_last_active_at', {
       withTimezone: true,
       mode: 'string'
@@ -757,7 +719,11 @@ export const conversations = pgTable(
       mode: 'string'
     }),
     adopterId: uuid('adopter_id').notNull(),
-    rehomerId: uuid('rehomer_id').notNull()
+    rehomerId: uuid('rehomer_id').notNull(),
+    conversationId: uuid('conversation_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull()
   },
   (table) => [
     foreignKey({
@@ -773,33 +739,77 @@ export const conversations = pgTable(
   ]
 );
 
-export const animalPhotos = pgTable(
-  'animal_photos',
+export const users = pgTable(
+  'users',
   {
-    animalPhotoId: serial('animal_photo_id').primaryKey().notNull(),
-    animalId: integer('animal_id'),
-    photoUrl: text('photo_url').notNull()
+    email: varchar({ length: 100 }).notNull(),
+    phoneNumber: varchar('phone_number', { length: 100 }),
+    displayName: varchar('display_name', { length: 300 }),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'string'
+    }).notNull(),
+    dateOfBirth: date('date_of_birth'),
+    avatarUrl: text('avatar_url'),
+    bio: text(),
+    gender: varchar(),
+    userId: uuid('user_id').defaultRandom().primaryKey().notNull(),
+    userTypeId: uuid('user_type_id').defaultRandom().notNull()
   },
   (table) => [
     foreignKey({
-      columns: [table.animalId],
-      foreignColumns: [animals.animalId],
-      name: 'animal_photos_animal_id_fkey'
+      columns: [table.userId],
+      foreignColumns: [usersInAuth.id],
+      name: 'users_user_id_fkey'
     })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
+    foreignKey({
+      columns: [table.userTypeId],
+      foreignColumns: [usertypes.userTypeId],
+      name: 'users_user_type_id_fkey'
+    }).onUpdate('cascade')
+  ]
+);
+
+export const messages = pgTable(
+  'messages',
+  {
+    content: text().notNull(),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'string'
+    }).notNull(),
+    senderId: uuid('sender_id').notNull(),
+    messageId: uuid('message_id').defaultRandom().primaryKey().notNull(),
+    conversationId: uuid('conversation_id').defaultRandom().notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.senderId],
+      foreignColumns: [users.userId],
+      name: 'fk_messages_users'
+    }),
+    foreignKey({
+      columns: [table.conversationId],
+      foreignColumns: [conversations.conversationId],
+      name: 'messages_conversation_id_fkey'
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade')
   ]
 );
 
 export const swipes = pgTable(
   'swipes',
   {
-    swipeId: serial('swipe_id').primaryKey().notNull(),
-    animalId: integer('animal_id').notNull(),
     swipedAt: timestamp('swiped_at', {
       withTimezone: true,
       mode: 'string'
     }).notNull(),
     rehomerId: uuid('rehomer_id').notNull(),
-    potentialAdopterId: uuid('potential_adopter_id').notNull()
+    potentialAdopterId: uuid('potential_adopter_id').notNull(),
+    swipeId: uuid('swipe_id').defaultRandom().primaryKey().notNull()
   },
   (table) => [
     foreignKey({
@@ -811,11 +821,6 @@ export const swipes = pgTable(
       columns: [table.rehomerId],
       foreignColumns: [users.userId],
       name: 'fk_swipes_users'
-    }),
-    foreignKey({
-      columns: [table.animalId],
-      foreignColumns: [animals.animalId],
-      name: 'swipes_animal_id_fkey'
     })
   ]
 );
@@ -823,15 +828,16 @@ export const swipes = pgTable(
 export const userSearchPreferences = pgTable(
   'user_search_preferences',
   {
-    userSearchPreferenceId: serial('user_search_preference_id')
-      .primaryKey()
-      .notNull(),
-    minAgeMonths: real('min_age_months'),
-    maxAgeMonths: real('max_age_months'),
-    neutered: boolean(),
     gender: varchar({ length: 50 }),
     maxDistanceKm: integer('max_distance_km'),
-    userId: uuid('user_id').defaultRandom().notNull()
+    userId: uuid('user_id').defaultRandom().notNull(),
+    neutered: boolean(),
+    minAgeMonths: real('min_age_months'),
+    maxAgeMonths: real('max_age_months'),
+    userSearchPreferenceId: uuid('user_search_preference_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull()
   },
   (table) => [
     foreignKey({
@@ -843,55 +849,28 @@ export const userSearchPreferences = pgTable(
   ]
 );
 
-export const notifications = pgTable(
-  'notifications',
-  {
-    notificationId: serial('notification_id').primaryKey().notNull(),
-    content: text().notNull(),
-    redirectUrl: text('redirect_url').notNull(),
-    seen: boolean().default(false),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
-    targetUserId: uuid('target_user_id').notNull()
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.targetUserId],
-      foreignColumns: [users.userId],
-      name: 'fk_notifications_users'
-    })
-  ]
-);
-
 export const animalsAdopted = pgTable(
   'animals_adopted',
   {
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    adoptionId: bigint('adoption_id', { mode: 'number' })
-      .primaryKey()
-      .generatedByDefaultAsIdentity({
-        name: 'animals_adopted_id_seq',
-        startWith: 1,
-        increment: 1,
-        minValue: 1,
-        maxValue: 9223372036854775807,
-        cache: 1
-      }),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'string'
     }).notNull(),
-    animalId: integer('animal_id').notNull(),
-    rehomerId: uuid('rehomer_id').notNull()
+    rehomerId: uuid('rehomer_id').notNull(),
+    animalId: uuid('animal_id').defaultRandom().notNull(),
+    animalAdoptionId: uuid('animal_adoption_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull()
   },
   (table) => [
     foreignKey({
       columns: [table.animalId],
       foreignColumns: [animals.animalId],
       name: 'animals_adopted_animal_id_fkey'
-    }),
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade'),
     foreignKey({
       columns: [table.rehomerId],
       foreignColumns: [users.userId],
@@ -900,16 +879,36 @@ export const animalsAdopted = pgTable(
   ]
 );
 
+export const animalPhotos = pgTable(
+  'animal_photos',
+  {
+    photoUrl: text('photo_url').notNull(),
+    order: integer().notNull(),
+    animalId: uuid('animal_id').defaultRandom().notNull(),
+    animalPhotoId: uuid('animal_photo_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.animalId],
+      foreignColumns: [animals.animalId],
+      name: 'animal_photos_animal_id_fkey'
+    })
+      .onUpdate('cascade')
+      .onDelete('cascade')
+  ]
+);
+
 export const animals = pgTable(
   'animals',
   {
-    animalId: serial('animal_id').primaryKey().notNull(),
     name: varchar({ length: 200 }).notNull(),
     gender: varchar({ length: 50 }).notNull(),
     ageInWeeks: real('age_in_weeks').notNull(),
-    neutered: boolean(),
     addressDisplayName: text('address_display_name').notNull(),
-    description: text(),
+    description: text().notNull(),
     createdAt: timestamp('created_at', {
       withTimezone: true,
       mode: 'string'
@@ -926,7 +925,9 @@ export const animals = pgTable(
       precision: 9,
       scale: 6
     }).notNull(),
-    rehomerId: uuid('rehomer_id').notNull()
+    rehomerId: uuid('rehomer_id').notNull(),
+    neutered: boolean().notNull(),
+    animalId: uuid('animal_id').defaultRandom().primaryKey().notNull()
   },
   (table) => [
     foreignKey({
@@ -934,5 +935,150 @@ export const animals = pgTable(
       foreignColumns: [users.userId],
       name: 'fk_animals_rehomerid__users'
     })
+  ]
+);
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    content: text().notNull(),
+    redirectUrl: text('redirect_url').notNull(),
+    seen: boolean().default(false),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'string'
+    }).notNull(),
+    targetUserId: uuid('target_user_id').notNull(),
+    notificationId: uuid('notification_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.targetUserId],
+      foreignColumns: [users.userId],
+      name: 'fk_notifications_users'
+    })
+  ]
+);
+
+export const oauthAuthorizationsInAuth = auth.table(
+  'oauth_authorizations',
+  {
+    id: uuid().notNull(),
+    authorizationId: text('authorization_id').notNull(),
+    clientId: uuid('client_id').notNull(),
+    userId: uuid('user_id'),
+    redirectUri: text('redirect_uri').notNull(),
+    scope: text().notNull(),
+    state: text(),
+    resource: text(),
+    codeChallenge: text('code_challenge'),
+    codeChallengeMethod: codeChallengeMethodInAuth('code_challenge_method'),
+    responseType: oauthResponseTypeInAuth('response_type')
+      .default('code')
+      .notNull(),
+    status: oauthAuthorizationStatusInAuth().default('pending').notNull(),
+    authorizationCode: text('authorization_code'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' })
+      .default(sql`(now() + '00:03:00'::interval)`)
+      .notNull(),
+    approvedAt: timestamp('approved_at', {
+      withTimezone: true,
+      mode: 'string'
+    }),
+    nonce: text()
+  },
+  (table) => [
+    index('oauth_auth_pending_exp_idx')
+      .using('btree', table.expiresAt.asc().nullsLast().op('timestamptz_ops'))
+      .where(sql`(status = 'pending'::auth.oauth_authorization_status)`),
+    foreignKey({
+      columns: [table.clientId],
+      foreignColumns: [oauthClientsInAuth.id],
+      name: 'oauth_authorizations_client_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [usersInAuth.id],
+      name: 'oauth_authorizations_user_id_fkey'
+    }).onDelete('cascade'),
+    check(
+      'oauth_authorizations_authorization_code_length',
+      sql`char_length(authorization_code) <= 255`
+    ),
+    check(
+      'oauth_authorizations_code_challenge_length',
+      sql`char_length(code_challenge) <= 128`
+    ),
+    check(
+      'oauth_authorizations_expires_at_future',
+      sql`expires_at > created_at`
+    ),
+    check('oauth_authorizations_nonce_length', sql`char_length(nonce) <= 255`),
+    check(
+      'oauth_authorizations_redirect_uri_length',
+      sql`char_length(redirect_uri) <= 2048`
+    ),
+    check(
+      'oauth_authorizations_resource_length',
+      sql`char_length(resource) <= 2048`
+    ),
+    check('oauth_authorizations_scope_length', sql`char_length(scope) <= 4096`),
+    check('oauth_authorizations_state_length', sql`char_length(state) <= 4096`)
+  ]
+);
+
+export const oauthConsentsInAuth = auth.table(
+  'oauth_consents',
+  {
+    id: uuid().notNull(),
+    userId: uuid('user_id').notNull(),
+    clientId: uuid('client_id').notNull(),
+    scopes: text().notNull(),
+    grantedAt: timestamp('granted_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true, mode: 'string' })
+  },
+  (table) => [
+    index('oauth_consents_active_client_idx')
+      .using('btree', table.clientId.asc().nullsLast().op('uuid_ops'))
+      .where(sql`(revoked_at IS NULL)`),
+    index('oauth_consents_active_user_client_idx')
+      .using(
+        'btree',
+        table.userId.asc().nullsLast().op('uuid_ops'),
+        table.clientId.asc().nullsLast().op('uuid_ops')
+      )
+      .where(sql`(revoked_at IS NULL)`),
+    index('oauth_consents_user_order_idx').using(
+      'btree',
+      table.userId.asc().nullsLast().op('timestamptz_ops'),
+      table.grantedAt.desc().nullsFirst().op('timestamptz_ops')
+    ),
+    foreignKey({
+      columns: [table.clientId],
+      foreignColumns: [oauthClientsInAuth.id],
+      name: 'oauth_consents_client_id_fkey'
+    }).onDelete('cascade'),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [usersInAuth.id],
+      name: 'oauth_consents_user_id_fkey'
+    }).onDelete('cascade'),
+    check(
+      'oauth_consents_revoked_after_granted',
+      sql`(revoked_at IS NULL) OR (revoked_at >= granted_at)`
+    ),
+    check('oauth_consents_scopes_length', sql`char_length(scopes) <= 2048`),
+    check(
+      'oauth_consents_scopes_not_empty',
+      sql`char_length(TRIM(BOTH FROM scopes)) > 0`
+    )
   ]
 );
