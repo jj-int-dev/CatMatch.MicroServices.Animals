@@ -13,7 +13,7 @@ interface Config {
 }
 
 const config: Config = {
-  PORT: Number(process.env.PORT!),
+  PORT: +process.env.PORT!,
   NODE_ENV: process.env.NODE_ENV!,
   SUPABASE_URL: process.env.SUPABASE_URL!,
   SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY!,

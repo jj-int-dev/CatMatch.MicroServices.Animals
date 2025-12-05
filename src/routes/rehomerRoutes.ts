@@ -2,10 +2,12 @@ import { Router, type Request, type Response } from 'express';
 import isAuthorized from '../validators/requests/isAuthorized';
 import userIdValidator from '../validators/requests/userIdValidator';
 import getErrorResponseJson from '../utils/getErrorResponseJson';
-import getAnimalListingsAction from '../actions/getAnimalListingsAction';
+import { getAnimalListingsAction } from '../actions/getAnimalListingsAction';
 import animalIdValidator from '../validators/requests/animalIdValidator';
 import userCanMakeAnimalUpdatesValidator from '../validators/requests/userCanMakeAnimalUpdatesValidator';
-import getAnimalListingAction from '../actions/getAnimalListingAction';
+import { getAnimalListingAction } from '../actions/getAnimalListingAction';
+import HttpResponseError from '../dtos/httpResponseError';
+import paginationValidator from '../validators/requests/paginationValidator';
 
 const router = Router();
 
@@ -47,26 +49,15 @@ router.get(
   '/:userId/animals',
   isAuthorized,
   userIdValidator,
+  paginationValidator,
   async (req: Request, res: Response) => {
     try {
-      const userId = req.params.userId!;
-      const page = req.query.page ? parseInt(req.query.page as string) : 1;
-      const pageSize = req.query.pageSize
-        ? parseInt(req.query.pageSize as string)
-        : 10;
-
-      // Validate pagination parameters
-      if (page < 1) {
-        return res.status(400).json({ message: 'Page must be at least 1' });
-      }
-      if (pageSize < 1 || pageSize > 100) {
-        return res
-          .status(400)
-          .json({ message: 'Page size must be between 1 and 100' });
-      }
-
-      const result = await getAnimalListingsAction(userId, page, pageSize);
-      return res.status(200).json(result);
+      const { animals, pagination } = await getAnimalListingsAction(
+        req.params.userId!,
+        +req.query.page!,
+        +req.query.pageSize!
+      );
+      return res.status(200).json({ animals, pagination });
     } catch (error) {
       return getErrorResponseJson(error, res);
     }

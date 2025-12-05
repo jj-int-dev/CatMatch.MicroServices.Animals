@@ -7,16 +7,20 @@ import {
 } from '../validators/database/animalListingValidator';
 import type { ZodSafeParseResult } from 'zod';
 
+export type GetAnimalListingCommandResponse = Promise<
+  ZodSafeParseResult<AnimalListingSchema>
+>;
+
 /**
  *
  * @param userId The ID of the user whose animal listing should be fetched
  * @param animalId The ID of the animal listing to fetch
- * @returns The animal listing if it exists
+ * @returns A {@link GetAnimalListingCommandResponse}
  */
-export default async function (
+export async function getAnimalListingCommand(
   userId: string,
   animalId: string
-): Promise<ZodSafeParseResult<AnimalListingSchema>> {
+): GetAnimalListingCommandResponse {
   return animalListingValidator.safeParse(
     await db.query.animals.findFirst({
       columns: {

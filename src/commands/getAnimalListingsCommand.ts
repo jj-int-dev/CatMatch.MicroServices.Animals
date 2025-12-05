@@ -6,35 +6,37 @@ import {
   type AnimalListingsSchema
 } from '../validators/database/animalListingsValidator';
 
+export type GetAnimalListingsCommandResponse = Promise<{
+  success: boolean;
+  data?: AnimalListingsSchema;
+  errorMsg?: string;
+  totalResults?: number;
+  page?: number;
+  pageSize?: number;
+}>;
+
 /**
  *
  * @param userId The ID of the user whose animal listings should be fetched
  * @param page The page number (1-indexed)
  * @param pageSize The number of items per page
- * @returns An object containing the animal listings if they exist, along with pagination metadata
+ * @returns A {@link GetAnimalListingsCommandResponse}
  */
-export default async function (
+export async function getAnimalListingsCommand(
   userId: string,
-  page: number = 1,
-  pageSize: number = 10
-): Promise<{
-  success: boolean;
-  data?: AnimalListingsSchema;
-  error?: unknown;
-  total?: number;
-  page?: number;
-  pageSize?: number;
-}> {
+  page: number,
+  pageSize: number
+): GetAnimalListingsCommandResponse {
   try {
     // Calculate offset
     const offset = (page - 1) * pageSize;
 
     // Get total count
-    const totalResult = await db
+    const recordCount = await db
       .select({ count: sql<number>`count(*)` })
       .from(animals)
       .where(eq(animals.rehomerId, userId));
-    const total = Number(totalResult[0]?.count ?? 0);
+    const totalResults = +(recordCount[0]?.count ?? 0);
 
     // Get paginated results
     const result = await db.query.animals.findMany({
@@ -66,15 +68,17 @@ export default async function (
       return {
         success: true,
         data: validationResult.data,
-        total,
+        totalResults,
         page,
         pageSize
       };
     } else {
       return {
         success: false,
-        error: validationResult.error,
-        total,
+        errorMsg: validationResult.error.issues
+          .map((issue) => issue.message)
+          .join('\n'),
+        totalResults,
         page,
         pageSize
       };
@@ -82,7 +86,7 @@ export default async function (
   } catch (error) {
     return {
       success: false,
-      error
+      errorMsg: (error as Error).message
     };
   }
 }

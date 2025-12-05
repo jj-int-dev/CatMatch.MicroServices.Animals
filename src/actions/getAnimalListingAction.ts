@@ -1,18 +1,20 @@
-import getAnimalListingCommand from '../commands/getAnimalListingCommand';
+import { getAnimalListingCommand } from '../commands/getAnimalListingCommand';
 import type { AnimalListingSchema } from '../validators/database/animalListingValidator';
 import HttpResponseError from '../dtos/httpResponseError';
+
+export type GetAnimalListingActionResponse = Promise<AnimalListingSchema>;
 
 /**
  *
  * @param userId The ID of the user whose animal listing should be fetched
  * @param animalId The ID of the animal listing to fetch
- * @returns The animal listing if it exists
- * @throws {HttpResponseError} If an error occurred while fetching the animal listing from the database
+ * @returns A {@link GetAnimalListingActionResponse}
+ * @throws A {@link HttpResponseError} If an error occurred while fetching the animal listing from the database
  */
-export default async function (
+export async function getAnimalListingAction(
   userId: string,
   animalId: string
-): Promise<AnimalListingSchema> {
+): GetAnimalListingActionResponse {
   console.log('Entering GetAnimalListingAction ...');
   const { success, data, error } = await getAnimalListingCommand(
     userId,
