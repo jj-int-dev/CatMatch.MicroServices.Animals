@@ -6,7 +6,8 @@ export default defineConfig({
   schema: './src/database-migrations/schema.ts',
   dialect: 'postgresql',
   schemaFilter: ['public', 'auth'],
-  tablesFilter: ['auth.users'],
+  tablesFilter: ['auth.users', 'public.*'],
+  extensionsFilters: ['postgis'],
   dbCredentials: {
     url: config.DATABASE_URL
   },

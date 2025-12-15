@@ -10,6 +10,8 @@ export const animalListingValidator = z
     addressDisplayName: z.string().min(1),
     description: z.string().min(1),
     createdAt: z.iso.datetime(),
+    addressLatitude: z.number(),
+    addressLongitude: z.number(),
     animalPhotos: z.array(
       z.object({
         photoUrl: z.url(),
@@ -17,6 +19,6 @@ export const animalListingValidator = z
       })
     )
   })
-  .optional();
+  .nullish();
 
 export type AnimalListingSchema = z.infer<typeof animalListingValidator>;

@@ -20,7 +20,7 @@ import {
   unique,
   integer,
   real,
-  numeric
+  geometry
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
@@ -195,6 +195,25 @@ export const instancesInAuth = auth.table('instances', {
 export const schemaMigrationsInAuth = auth.table('schema_migrations', {
   version: varchar({ length: 255 }).notNull()
 });
+
+export const oauthClientStatesInAuth = auth.table(
+  'oauth_client_states',
+  {
+    id: uuid().notNull(),
+    providerType: text('provider_type').notNull(),
+    codeVerifier: text('code_verifier'),
+    createdAt: timestamp('created_at', {
+      withTimezone: true,
+      mode: 'string'
+    }).notNull()
+  },
+  (table) => [
+    index('idx_oauth_client_states_created_at').using(
+      'btree',
+      table.createdAt.asc().nullsLast().op('timestamptz_ops')
+    )
+  ]
+);
 
 export const mfaFactorsInAuth = auth.table(
   'mfa_factors',
@@ -710,10 +729,9 @@ export const conversations = pgTable(
       withTimezone: true,
       mode: 'string'
     }),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
     lastMessageAt: timestamp('last_message_at', {
       withTimezone: true,
       mode: 'string'
@@ -776,10 +794,9 @@ export const messages = pgTable(
   'messages',
   {
     content: text().notNull(),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
     senderId: uuid('sender_id').notNull(),
     messageId: uuid('message_id').defaultRandom().primaryKey().notNull(),
     conversationId: uuid('conversation_id').defaultRandom().notNull()
@@ -797,6 +814,33 @@ export const messages = pgTable(
     })
       .onUpdate('cascade')
       .onDelete('cascade')
+  ]
+);
+
+export const userSearchPreferences = pgTable(
+  'user_search_preferences',
+  {
+    gender: varchar({ length: 50 }),
+    maxDistanceKm: integer('max_distance_km'),
+    userId: uuid('user_id').defaultRandom().notNull(),
+    neutered: boolean().default(false).notNull(),
+    minAgeMonths: real('min_age_months'),
+    maxAgeMonths: real('max_age_months'),
+    userSearchPreferenceId: uuid('user_search_preference_id')
+      .defaultRandom()
+      .primaryKey()
+      .notNull(),
+    // PostGIS geography point
+    location: geometry('location', { type: 'Point', srid: 4326 }).notNull(),
+    locationDisplayName: text('location_display_name')
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [users.userId],
+      name: 'fk_user_search_preferences_users'
+    }),
+    unique('user_search_preferences_user_id_key').on(table.userId)
   ]
 );
 
@@ -825,37 +869,46 @@ export const swipes = pgTable(
   ]
 );
 
-export const userSearchPreferences = pgTable(
-  'user_search_preferences',
+export const animals = pgTable(
+  'animals',
   {
-    gender: varchar({ length: 50 }),
-    maxDistanceKm: integer('max_distance_km'),
-    userId: uuid('user_id').defaultRandom().notNull(),
-    neutered: boolean(),
-    minAgeMonths: real('min_age_months'),
-    maxAgeMonths: real('max_age_months'),
-    userSearchPreferenceId: uuid('user_search_preference_id')
-      .defaultRandom()
-      .primaryKey()
-      .notNull()
+    name: varchar({ length: 200 }).notNull(),
+    gender: varchar({ length: 50 }).notNull(),
+    ageInWeeks: real('age_in_weeks').notNull(),
+    addressDisplayName: text('address_display_name').notNull(),
+    description: text().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
+    lastUpdatedAt: timestamp('last_updated_at', {
+      withTimezone: true,
+      mode: 'string'
+    }),
+    rehomerId: uuid('rehomer_id').notNull(),
+    neutered: boolean().notNull(),
+    animalId: uuid('animal_id').defaultRandom().primaryKey().notNull(),
+    // PostGIS geography point
+    address: geometry('address', { type: 'Point', srid: 4326 }).notNull()
   },
   (table) => [
+    index('animals_address').using(
+      'gist',
+      table.address.asc().nullsLast().op('gist_geography_ops')
+    ),
     foreignKey({
-      columns: [table.userId],
+      columns: [table.rehomerId],
       foreignColumns: [users.userId],
-      name: 'fk_user_search_preferences_users'
-    }),
-    unique('user_search_preferences_user_id_key').on(table.userId)
+      name: 'fk_animals_rehomerid__users'
+    })
   ]
 );
 
 export const animalsAdopted = pgTable(
   'animals_adopted',
   {
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
     rehomerId: uuid('rehomer_id').notNull(),
     animalId: uuid('animal_id').defaultRandom().notNull(),
     animalAdoptionId: uuid('animal_adoption_id')
@@ -901,53 +954,15 @@ export const animalPhotos = pgTable(
   ]
 );
 
-export const animals = pgTable(
-  'animals',
-  {
-    name: varchar({ length: 200 }).notNull(),
-    gender: varchar({ length: 50 }).notNull(),
-    ageInWeeks: real('age_in_weeks').notNull(),
-    addressDisplayName: text('address_display_name').notNull(),
-    description: text().notNull(),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
-    lastUpdatedAt: timestamp('last_updated_at', {
-      withTimezone: true,
-      mode: 'string'
-    }),
-    addressLatitude: numeric('address_latitude', {
-      precision: 8,
-      scale: 6
-    }).notNull(),
-    addressLongitude: numeric('address_longitude', {
-      precision: 9,
-      scale: 6
-    }).notNull(),
-    rehomerId: uuid('rehomer_id').notNull(),
-    neutered: boolean().notNull(),
-    animalId: uuid('animal_id').defaultRandom().primaryKey().notNull()
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.rehomerId],
-      foreignColumns: [users.userId],
-      name: 'fk_animals_rehomerid__users'
-    })
-  ]
-);
-
 export const notifications = pgTable(
   'notifications',
   {
     content: text().notNull(),
     redirectUrl: text('redirect_url').notNull(),
     seen: boolean().default(false),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' })
+      .defaultNow()
+      .notNull(),
     targetUserId: uuid('target_user_id').notNull(),
     notificationId: uuid('notification_id')
       .defaultRandom()

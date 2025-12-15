@@ -39,30 +39,31 @@ export async function getAnimalListingsCommand(
     const totalResults = +(recordCount[0]?.count ?? 0);
 
     // Get paginated results
-    const result = await db.query.animals.findMany({
-      columns: {
-        animalId: true,
-        name: true,
-        gender: true,
-        ageInWeeks: true,
-        neutered: true,
-        addressDisplayName: true,
-        description: true,
-        createdAt: true
-      },
-      with: {
-        animalPhotos: {
-          columns: { photoUrl: true, order: true },
-          orderBy: (animalPhotos, { asc }) => [asc(animalPhotos.order)]
-        }
-      },
-      where: eq(animals.rehomerId, userId),
-      orderBy: (animals, { desc }) => [desc(animals.createdAt)],
-      limit: pageSize,
-      offset: offset
-    });
+    const records = await db.execute(sql`
+      SELECT
+        a.animal_id AS animalId,
+        a.name,
+        a.gender,
+        a.age_in_weeks AS ageInWeeks,
+        a.neutered,
+        a.address_display_name AS addressDisplayName,
+        description,
+        created_at AS createdAt,
+        ST_Y(a.address::geometry) AS addressLatitude,
+        ST_X(a.address::geometry) AS addressLongitude,
+        json_agg(
+          json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
+          ORDER BY ap.order ASC
+        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animalPhotos
+      FROM animals a
+      LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
+      WHERE a.rehomer_id = ${userId}
+      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.address_display_name, a.description, a.created_at, a.address;
+      ORDER BY a.created_at DESC
+      LIMIT ${pageSize} OFFSET ${offset};
+    `);
 
-    const validationResult = animalListingsValidator.safeParse(result);
+    const validationResult = animalListingsValidator.safeParse(records);
 
     if (validationResult.success) {
       return {
