@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { animalPhotosValidator } from '../animalPhotosValidator';
 
 export const animalListingValidator = z
   .object({
@@ -12,12 +13,7 @@ export const animalListingValidator = z
     createdAt: z.iso.datetime(),
     addressLatitude: z.number(),
     addressLongitude: z.number(),
-    animalPhotos: z.array(
-      z.object({
-        photoUrl: z.url(),
-        order: z.number().min(0)
-      })
-    )
+    animalPhotos: animalPhotosValidator
   })
   .nullish();
 
