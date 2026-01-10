@@ -1,7 +1,7 @@
 import * as z from 'zod';
 import { animalPhotosValidator } from '../animalPhotosValidator';
 
-export const animalListingsValidator = z.array(
+export const animalsValidator = z.array(
   z.object({
     animalId: z.string().min(1),
     name: z.string().min(1),
@@ -17,4 +17,4 @@ export const animalListingsValidator = z.array(
   })
 );
 
-export type AnimalListingsSchema = z.infer<typeof animalListingsValidator>;
+export type AnimalsSchema = z.infer<typeof animalsValidator>;

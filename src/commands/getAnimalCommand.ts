@@ -1,26 +1,25 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { db } from '../utils/databaseClient';
-import { animals } from '../database-migrations/schema';
 import {
-  animalListingValidator,
-  type AnimalListingSchema
-} from '../validators/database/animalListingValidator';
+  animalValidator,
+  type AnimalSchema
+} from '../validators/database/animalValidator';
 import type { ZodSafeParseResult } from 'zod';
 
-export type GetAnimalListingCommandResponse = Promise<
-  ZodSafeParseResult<AnimalListingSchema>
+export type GetAnimalCommandResponse = Promise<
+  ZodSafeParseResult<AnimalSchema>
 >;
 
 /**
  *
  * @param userId The ID of the user whose animal listing should be fetched
  * @param animalId The ID of the animal listing to fetch
- * @returns A {@link GetAnimalListingCommandResponse}
+ * @returns A {@link GetAnimalCommandResponse}
  */
-export async function getAnimalListingCommand(
+export async function getAnimalCommand(
   userId: string,
   animalId: string
-): GetAnimalListingCommandResponse {
+): GetAnimalCommandResponse {
   const records = await db.execute(sql`
     SELECT
       a.animal_id AS animalId,
@@ -43,7 +42,7 @@ export async function getAnimalListingCommand(
     GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.address_display_name, a.description, a.created_at, a.address;
   `);
 
-  return animalListingValidator.safeParse(
+  return animalValidator.safeParse(
     Array.isArray(records) && records.length > 0 ? records[0] : null
   );
 }

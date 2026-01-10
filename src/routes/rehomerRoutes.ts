@@ -2,9 +2,9 @@ import { Router, type Request, type Response } from 'express';
 import isAuthorized from '../validators/requests/isAuthorized';
 import userIdValidator from '../validators/requests/userIdValidator';
 import getErrorResponseJson from '../utils/getErrorResponseJson';
-import { getAnimalListingsAction } from '../actions/getAnimalListingsAction';
+import { getAnimalsAction } from '../actions/getAnimalsAction';
 import animalIdValidator from '../validators/requests/animalIdValidator';
-import { getAnimalListingAction } from '../actions/getAnimalListingAction';
+import { getAnimalAction } from '../actions/getAnimalAction';
 import { addAnimalAction } from '../actions/addAnimalAction';
 import { addAnimalPhotosAction } from '../actions/addAnimalPhotosAction';
 import paginationValidator from '../validators/requests/paginationValidator';
@@ -63,7 +63,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const { userId, animalId } = req.params;
-      const animal = await getAnimalListingAction(userId!, animalId!);
+      const animal = await getAnimalAction(userId!, animalId!);
       return res.status(200).json({ animal });
     } catch (error) {
       return getErrorResponseJson(error, res);
@@ -78,7 +78,7 @@ router.get(
   paginationValidator,
   async (req: Request, res: Response) => {
     try {
-      const { animals, pagination } = await getAnimalListingsAction(
+      const { animals, pagination } = await getAnimalsAction(
         req.params.userId!,
         +req.query.page!,
         +req.query.pageSize!
@@ -98,7 +98,7 @@ router.patch(
   updateAnimalValidator,
   async (req: Request, res: Response) => {
     try {
-      const { userId, animalId } = req.params;
+      const { userId, animalId } = req.para y5tn yneryn 4e5 4 ms;
       await updateAnimalAction(userId!, animalId!, req.body);
       return res.sendStatus(200);
     } catch (error) {

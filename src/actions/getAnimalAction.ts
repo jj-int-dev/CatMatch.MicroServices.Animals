@@ -1,30 +1,27 @@
-import { getAnimalListingCommand } from '../commands/getAnimalListingCommand';
-import type { AnimalListingSchema } from '../validators/database/animalListingValidator';
+import { getAnimalCommand } from '../commands/getAnimalCommand';
+import type { AnimalSchema } from '../validators/database/animalValidator';
 import HttpResponseError from '../dtos/httpResponseError';
 
-export type GetAnimalListingActionResponse = Promise<AnimalListingSchema>;
+export type GetAnimalActionResponse = Promise<AnimalSchema>;
 
 /**
  *
  * @param userId The ID of the user whose animal listing should be fetched
  * @param animalId The ID of the animal listing to fetch
- * @returns A {@link GetAnimalListingActionResponse}
+ * @returns A {@link GetAnimalActionResponse}
  * @throws A {@link HttpResponseError} If an error occurred while fetching the animal listing from the database
  */
-export async function getAnimalListingAction(
+export async function getAnimalAction(
   userId: string,
   animalId: string
-): GetAnimalListingActionResponse {
-  console.log('Entering GetAnimalListingAction ...');
-  const { success, data, error } = await getAnimalListingCommand(
-    userId,
-    animalId
-  );
+): GetAnimalActionResponse {
+  console.log('Entering GetAnimalAction ...');
+  const { success, data, error } = await getAnimalCommand(userId, animalId);
 
   if (success) {
     if (data) {
       console.log(
-        `Successfully retrieved animal listing with animalId ${animalId} for user with userId ${userId}\nExiting GetAnimalListingAction ...`
+        `Successfully retrieved animal listing with animalId ${animalId} for user with userId ${userId}\nExiting GetAnimalAction ...`
       );
       return data;
     } else {

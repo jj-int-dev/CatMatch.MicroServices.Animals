@@ -1,5 +1,5 @@
 import { addAnimalPhotosCommand } from '../commands/addAnimalPhotosCommand';
-import type { AnimalListingSchema } from '../validators/database/animalListingValidator';
+import type { AnimalListingSchema } from '../validators/database/animalValidator';
 import HttpResponseError from '../dtos/httpResponseError';
 
 export type AddAnimalListingPhotosActionResponse = Promise<AnimalListingSchema>;

@@ -1,9 +1,9 @@
-import { getAnimalListingsCommand } from '../commands/getAnimalListingsCommand';
-import type { AnimalListingsSchema } from '../validators/database/animalListingsValidator';
+import { getAnimalsCommand } from '../commands/getAnimalsCommand';
+import type { AnimalsSchema } from '../validators/database/animalsValidator';
 import HttpResponseError from '../dtos/httpResponseError';
 
-export type GetAnimalListingsActionResponse = Promise<{
-  animals: AnimalListingsSchema;
+export type GetAnimalsActionResponse = Promise<{
+  animals: AnimalsSchema;
   pagination: {
     totalResults: number;
     page: number;
@@ -17,15 +17,15 @@ export type GetAnimalListingsActionResponse = Promise<{
  * @param userId The ID of the user whose animal listings should be fetched
  * @param page The page number (1-indexed)
  * @param pageSize The number of items per page
- * @returns A {@link GetAnimalListingsActionResponse} containing the animal listings and pagination metadata
- * @throws A {@link HttpResponseError} If an error occurred while fetching the animal listings from the database
+ * @returns A {@link GetAnimalsActionResponse} containing the animals and pagination metadata
+ * @throws A {@link HttpResponseError} If an error occurred while fetching the animals from the database
  */
-export async function getAnimalListingsAction(
+export async function getAnimalsAction(
   userId: string,
   page: number,
   pageSize: number
-): GetAnimalListingsActionResponse {
-  console.log('Entering GetAnimalListingsAction ...');
+): GetAnimalsActionResponse {
+  console.log('Entering GetAnimalsAction ...');
   const {
     success,
     data,
@@ -33,7 +33,7 @@ export async function getAnimalListingsAction(
     totalResults,
     page: resultPage,
     pageSize: resultPageSize
-  } = await getAnimalListingsCommand(userId, page, pageSize);
+  } = await getAnimalsCommand(userId, page, pageSize);
 
   if (success && data) {
     const totalPages = Math.ceil(
@@ -41,7 +41,7 @@ export async function getAnimalListingsAction(
     );
 
     console.log(
-      `Successfully retrieved ${data.length} animal listings for user with userId ${userId} (page ${resultPage || page}, size ${resultPageSize || pageSize})\nExiting GetAnimalListingsAction ...`
+      `Successfully retrieved ${data.length} animal listings for user with userId ${userId} (page ${resultPage || page}, size ${resultPageSize || pageSize})\nExiting GetAnimalsAction ...`
     );
 
     return {

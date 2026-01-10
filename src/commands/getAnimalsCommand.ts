@@ -2,13 +2,13 @@ import { eq, sql } from 'drizzle-orm';
 import { db } from '../utils/databaseClient';
 import { animals } from '../database-migrations/schema';
 import {
-  animalListingsValidator,
-  type AnimalListingsSchema
-} from '../validators/database/animalListingsValidator';
+  animalsValidator,
+  type AnimalsSchema
+} from '../validators/database/animalsValidator';
 
-export type GetAnimalListingsCommandResponse = Promise<{
+export type GetAnimalsCommandResponse = Promise<{
   success: boolean;
-  data?: AnimalListingsSchema;
+  data?: AnimalsSchema;
   errorMsg?: string;
   totalResults?: number;
   page?: number;
@@ -20,13 +20,13 @@ export type GetAnimalListingsCommandResponse = Promise<{
  * @param userId The ID of the user whose animal listings should be fetched
  * @param page The page number (1-indexed)
  * @param pageSize The number of items per page
- * @returns A {@link GetAnimalListingsCommandResponse}
+ * @returns A {@link GetAnimalsCommandResponse}
  */
-export async function getAnimalListingsCommand(
+export async function getAnimalsCommand(
   userId: string,
   page: number,
   pageSize: number
-): GetAnimalListingsCommandResponse {
+): GetAnimalsCommandResponse {
   try {
     // Calculate offset
     const offset = (page - 1) * pageSize;
@@ -63,7 +63,7 @@ export async function getAnimalListingsCommand(
       LIMIT ${pageSize} OFFSET ${offset};
     `);
 
-    const validationResult = animalListingsValidator.safeParse(records);
+    const validationResult = animalsValidator.safeParse(records);
 
     if (validationResult.success) {
       return {
