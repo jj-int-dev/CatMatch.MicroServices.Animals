@@ -50,7 +50,7 @@ export async function getAdoptableAnimalsCommand(
       animalFilters.longitude!,
       precision
     );
-    const cacheKey = `animalsForGeohash:${geohash}:${animalFilters.maxDistanceKm}`;
+    const cacheKey = `animalsForGeohash:${geohash}:${animalFilters.maxDistanceMeters}`;
     const offset = (page - 1) * pageSize;
 
     const cachedNearbyAnimals =
@@ -69,7 +69,7 @@ export async function getAdoptableAnimalsCommand(
       };
     }
 
-    // Get animals
+    // Get all animals within maxDistanceKm kilometers of the location indicated by animalFilters
     const records = await db.execute(sql`
       SELECT
         a.animal_id AS animalId,
@@ -77,17 +77,26 @@ export async function getAdoptableAnimalsCommand(
         a.gender,
         a.age_in_weeks AS ageInWeeks,
         a.neutered,
-        description,
+        a.description,
         ST_Y(a.address::geometry) AS addressLatitude,
         ST_X(a.address::geometry) AS addressLongitude,
         json_agg(
           json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
           ORDER BY ap.order ASC
-        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animalPhotos
+        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animalPhotos,
+        ST_DISTANCE(
+          a.address,
+          ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}, 4326)::geography
+        ) as distanceMeters
       FROM animals a
+      WHERE ST_DWithin(
+        a.address,
+        ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}), 4326)::geography,
+        ${animalFilters.maxDistanceMeters}
+      )
       LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
-      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address;
-      ORDER BY a.created_at DESC
+      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address
+      ORDER BY distanceMeters ASC
     `);
 
     const validationResult = adoptableAnimalsValidator.safeParse(records);

@@ -2,12 +2,14 @@ import type { Request, Response, NextFunction } from 'express';
 import * as z from 'zod';
 
 // using fixed distances will increase cache hits for finding animals in a given area
-function normalizeMaxDistanceKm(maxDistanceKm: number) {
-  const distanceBuckets = [1, 3, 5, 10, 20, 35, 50, 75, 100, 150, 250];
+function normalizeMaxDistanceMeters(maxDistanceMeters: number) {
+  const distanceBuckets = [
+    1000, 3000, 5000, 10000, 20000, 35000, 50000, 75000, 100000, 150000, 250000
+  ];
   for (const bucket of distanceBuckets) {
-    if (maxDistanceKm <= bucket) return bucket;
+    if (maxDistanceMeters <= bucket) return bucket;
   }
-  return 250;
+  return 250000;
 }
 
 const getAdoptableAnimalsValidations = z.object({
@@ -37,13 +39,13 @@ const getAdoptableAnimalsValidations = z.object({
     .min(-180)
     .max(180, 'Longitude must be between -180 and 180')
     .optional(),
-  maxDistanceKm: z
+  maxDistanceMeters: z
     .number()
-    .min(1, 'Invalid maximum distance')
-    .max(250, 'Invalid maximum distance')
+    .min(1000, 'Invalid minimum distance')
+    .max(250000, 'Invalid maximum distance')
     .optional()
-    .default(250)
-    .transform(normalizeMaxDistanceKm)
+    .default(250000)
+    .transform(normalizeMaxDistanceMeters)
 });
 
 export type GetAdoptableAnimalsSchema = z.infer<

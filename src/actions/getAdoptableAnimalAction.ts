@@ -1,8 +1,9 @@
 import { getAdoptableAnimalCommand } from '../commands/getAdoptableAnimalCommand';
-import type { AdoptableAnimalSchema } from '../validators/database/adoptableAnimalValidator';
 import HttpResponseError from '../dtos/httpResponseError';
-
-export type GetAdoptableAnimalActionResponse = Promise<AdoptableAnimalSchema>;
+import {
+  toAdoptableAnimal,
+  type AdoptableAnimal
+} from '../mappers/adoptableAnimalSchemaToAdoptableAnimal';
 
 /**
  * @param animalId The ID of the adoptable animal to fetch
@@ -11,7 +12,7 @@ export type GetAdoptableAnimalActionResponse = Promise<AdoptableAnimalSchema>;
  */
 export async function getAdoptableAnimalAction(
   animalId: string
-): GetAdoptableAnimalActionResponse {
+): Promise<AdoptableAnimal> {
   console.log('Entering GetAdoptableAnimalAction ...');
   const { success, data, error } = await getAdoptableAnimalCommand(animalId);
 
@@ -20,7 +21,7 @@ export async function getAdoptableAnimalAction(
       console.log(
         `Successfully retrieved adoptable animal with animalId ${animalId}\nExiting GetAnimalAction ...`
       );
-      return data;
+      return toAdoptableAnimal(data);
     } else {
       throw new HttpResponseError(
         404,

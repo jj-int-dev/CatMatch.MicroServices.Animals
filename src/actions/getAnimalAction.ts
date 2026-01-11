@@ -2,8 +2,6 @@ import { getAnimalCommand } from '../commands/getAnimalCommand';
 import type { AnimalSchema } from '../validators/database/animalValidator';
 import HttpResponseError from '../dtos/httpResponseError';
 
-export type GetAnimalActionResponse = Promise<AnimalSchema>;
-
 /**
  *
  * @param userId The ID of the user whose animal listing should be fetched
@@ -14,7 +12,7 @@ export type GetAnimalActionResponse = Promise<AnimalSchema>;
 export async function getAnimalAction(
   userId: string,
   animalId: string
-): GetAnimalActionResponse {
+): Promise<AnimalSchema> {
   console.log('Entering GetAnimalAction ...');
   const { success, data, error } = await getAnimalCommand(userId, animalId);
 

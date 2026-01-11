@@ -1,10 +1,13 @@
 import type { Request } from 'express';
 import type { GetAdoptableAnimalsSchema } from '../validators/requests/getAdoptableAnimalsValidator';
-import type { AdoptableAnimalsSchema } from '../validators/database/adoptableAnimalsValidator';
 import HttpResponseError from '../dtos/httpResponseError';
 import getClientIPAddressCommand from '../commands/getClientIPAddressCommand';
 import getCoordinatesForIPCommand from '../commands/getCoordinatesForIPCommand';
 import { getAdoptableAnimalsCommand } from '../commands/getAdoptableAnimalsCommand';
+import {
+  toAdoptableAnimals,
+  type AdoptableAnimals
+} from '../mappers/adoptableAnimalsSchemaToAdoptableAnimals';
 
 function logAnimalFilters(animalFilters: GetAdoptableAnimalsSchema) {
   console.log('Search filters:');
@@ -36,7 +39,7 @@ async function populateCoordinates(
 }
 
 export type GetAdoptableAnimalsActionResponse = Promise<{
-  animals: AdoptableAnimalsSchema;
+  animals: AdoptableAnimals;
   pagination: {
     totalResults: number;
     page: number;
@@ -97,7 +100,7 @@ export async function getAdoptableAnimalsAction(
     );
 
     return {
-      animals: data,
+      animals: toAdoptableAnimals(data),
       pagination: {
         totalResults: totalResults || 0,
         page: resultPage || page,

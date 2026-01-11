@@ -11,6 +11,7 @@ export const adoptableAnimalsValidator = z.array(
     description: z.string().min(1),
     addressLatitude: z.number(),
     addressLongitude: z.number(),
+    distanceMeters: z.number(),
     animalPhotos: animalPhotosValidator
   })
 );

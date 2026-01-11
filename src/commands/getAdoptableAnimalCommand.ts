@@ -24,7 +24,7 @@ export async function getAdoptableAnimalCommand(
       a.gender,
       a.age_in_weeks AS ageInWeeks,
       a.neutered,
-      description,
+      a.description,
       ST_Y(a.address::geometry) AS addressLatitude,
       ST_X(a.address::geometry) AS addressLongitude,
       json_agg(

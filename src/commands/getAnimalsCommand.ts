@@ -47,7 +47,7 @@ export async function getAnimalsCommand(
         a.age_in_weeks AS ageInWeeks,
         a.neutered,
         a.address_display_name AS addressDisplayName,
-        description,
+        a.description,
         created_at AS createdAt,
         ST_Y(a.address::geometry) AS addressLatitude,
         ST_X(a.address::geometry) AS addressLongitude,
@@ -58,7 +58,7 @@ export async function getAnimalsCommand(
       FROM animals a
       LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
       WHERE a.rehomer_id = ${userId}
-      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.address_display_name, a.description, a.created_at, a.address;
+      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.address_display_name, a.description, a.created_at, a.address
       ORDER BY a.created_at DESC
       LIMIT ${pageSize} OFFSET ${offset};
     `);

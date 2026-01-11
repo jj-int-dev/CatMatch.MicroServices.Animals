@@ -28,7 +28,7 @@ export async function getAnimalCommand(
       a.age_in_weeks AS ageInWeeks,
       a.neutered,
       a.address_display_name AS addressDisplayName,
-      description,
+      a.description,
       created_at AS createdAt,
       ST_Y(a.address::geometry) AS addressLatitude,
       ST_X(a.address::geometry) AS addressLongitude,

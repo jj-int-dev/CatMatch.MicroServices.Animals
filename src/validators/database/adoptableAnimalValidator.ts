@@ -13,6 +13,6 @@ export const adoptableAnimalValidator = z
     addressLongitude: z.number(),
     animalPhotos: animalPhotosValidator
   })
-  .nullish();
+  .nullable();
 
 export type AdoptableAnimalSchema = z.infer<typeof adoptableAnimalValidator>;
