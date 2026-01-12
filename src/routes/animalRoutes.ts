@@ -23,7 +23,7 @@ router.get(
   }
 );
 
-router.get(
+router.post(
   '',
   isAuthorized,
   paginationValidator,
