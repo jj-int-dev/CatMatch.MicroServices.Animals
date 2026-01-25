@@ -29,17 +29,19 @@ async function populateCoordinates(
 
   if (!coords) throw new HttpResponseError(500, errorMsg);
 
-  const { latitude, longitude } = coords;
+  const { city, location } = coords;
   console.log(
-    `Found latitude ${latitude} and longitude ${longitude} for IP address ${clientIPAddress}`
+    `Found latitude ${location.latitude} and longitude ${location.longitude} for IP address ${clientIPAddress}`
   );
 
-  animalFilters.latitude = latitude;
-  animalFilters.longitude = longitude;
+  animalFilters.latitude = location.latitude;
+  animalFilters.longitude = location.longitude;
+  animalFilters.locationDetails = city.name;
 }
 
 export type GetAdoptableAnimalsActionResponse = Promise<{
   animals: AdoptableAnimals;
+  locationDisplay: string | null;
   pagination: {
     totalResults: number;
     page: number;
@@ -67,10 +69,7 @@ export async function getAdoptableAnimalsAction(
   let geohashPrecision = 6;
 
   // if coordinates not provided, use client IP address to determine coordinates
-  if (
-    !Object.hasOwn(animalFilters, 'latitude') ||
-    !Object.hasOwn(animalFilters, 'longitude')
-  ) {
+  if (animalFilters.locationSource === 'client-ip') {
     await populateCoordinates(animalFilters, req);
     // reduce the precision since coordinates based on IP address won't be as accurate
     geohashPrecision = 5;
@@ -101,6 +100,12 @@ export async function getAdoptableAnimalsAction(
 
     return {
       animals: toAdoptableAnimals(data),
+      locationDisplay:
+        (animalFilters.locationSource === 'client-ip' ||
+          animalFilters.locationSource === 'client-custom-location') &&
+        Object.hasOwn(animalFilters, 'locationDetails')
+          ? animalFilters.locationDetails!
+          : null,
       pagination: {
         totalResults: totalResults || 0,
         page: resultPage || page,

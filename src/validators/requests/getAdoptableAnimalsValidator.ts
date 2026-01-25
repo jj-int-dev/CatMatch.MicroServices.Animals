@@ -12,41 +12,72 @@ function normalizeMaxDistanceMeters(maxDistanceMeters: number) {
   return 250000;
 }
 
-const getAdoptableAnimalsValidations = z.object({
-  gender: z
-    .enum(['Male', 'Female'], `Invalid gender. 'Male' or 'Female' accepted.`)
-    .optional(),
-  minAgeWeeks: z
-    .number()
-    .int()
-    .min(0, 'Age must be 0 weeks or more')
-    .optional()
-    .default(0),
-  maxAgeWeeks: z
-    .number()
-    .int()
-    .max(1920, 'Age must be 1920 weeks or less')
-    .optional()
-    .default(1920),
-  neutered: z.boolean().optional().default(false),
-  latitude: z
-    .number()
-    .min(-90)
-    .max(90, 'Latitude must be between -90 and 90')
-    .optional(),
-  longitude: z
-    .number()
-    .min(-180)
-    .max(180, 'Longitude must be between -180 and 180')
-    .optional(),
-  maxDistanceMeters: z
-    .number()
-    .min(1000, 'Invalid minimum distance')
-    .max(250000, 'Invalid maximum distance')
-    .optional()
-    .default(250000)
-    .transform(normalizeMaxDistanceMeters)
-});
+const getAdoptableAnimalsValidations = z
+  .object({
+    gender: z
+      .enum(['Male', 'Female'], `Invalid gender. 'Male' or 'Female' accepted.`)
+      .optional(),
+    minAgeWeeks: z
+      .number()
+      .int()
+      .min(0, 'Age must be 0 weeks or more')
+      .optional()
+      .default(0),
+    maxAgeWeeks: z
+      .number()
+      .int()
+      .max(1920, 'Age must be 1920 weeks or less')
+      .optional()
+      .default(1920),
+    neutered: z.boolean().optional().default(false),
+    latitude: z
+      .number()
+      .min(-90)
+      .max(90, 'Latitude must be between -90 and 90')
+      .optional(),
+    longitude: z
+      .number()
+      .min(-180)
+      .max(180, 'Longitude must be between -180 and 180')
+      .optional(),
+    locationSource: z.enum(
+      ['client-ip', 'client-current-location', 'client-custom-location'],
+      'Invalid location source'
+    ),
+    locationDetails: z.string().optional(),
+    maxDistanceMeters: z
+      .number()
+      .min(1000, 'Invalid minimum distance')
+      .max(250000, 'Invalid maximum distance')
+      .optional()
+      .default(250000)
+      .transform(normalizeMaxDistanceMeters)
+  })
+  .refine(
+    (data) =>
+      !(
+        data.locationSource === 'client-custom-location' &&
+        data.locationDetails === undefined
+      ),
+    {
+      message:
+        "locationDetails is required when locationSource is 'client-custom-location'",
+      path: ['locationDetails']
+    }
+  )
+  .refine(
+    (data) =>
+      !(
+        (data.locationSource === 'client-current-location' ||
+          data.locationSource === 'client-custom-location') &&
+        (data.latitude === undefined || data.longitude === undefined)
+      ),
+    {
+      message:
+        "latitude and longitude are required when locationSource is 'client-current-location' or 'client-custom-location'",
+      path: ['latitude']
+    }
+  );
 
 export type GetAdoptableAnimalsSchema = z.infer<
   typeof getAdoptableAnimalsValidations
