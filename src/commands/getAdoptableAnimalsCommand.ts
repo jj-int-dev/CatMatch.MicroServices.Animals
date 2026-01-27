@@ -22,7 +22,7 @@ function filterAnimals(
   filters: GetAdoptableAnimalsSchema
 ) {
   return animals.filter((animal) => {
-    if (filters.gender && animal.gender !== filters.gender) return false;
+    if (!!filters.gender && animal.gender !== filters.gender) return false;
     if (filters.neutered && animal.neutered !== filters.neutered) return false;
     if (filters.minAgeWeeks > animal.ageInWeeks) return false;
     if (filters.maxAgeWeeks < animal.ageInWeeks) return false;

@@ -98,7 +98,7 @@ router.patch(
   updateAnimalValidator,
   async (req: Request, res: Response) => {
     try {
-      const { userId, animalId } = req.para y5tn yneryn 4e5 4 ms;
+      const { userId, animalId } = req.params;
       await updateAnimalAction(userId!, animalId!, req.body);
       return res.sendStatus(200);
     } catch (error) {

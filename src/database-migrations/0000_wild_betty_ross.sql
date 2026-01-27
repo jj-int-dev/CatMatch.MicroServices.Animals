@@ -296,26 +296,6 @@ CREATE TABLE "messages" (
 	"conversation_id" uuid DEFAULT gen_random_uuid() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "user_search_preferences" (
-	"gender" varchar(50),
-	"max_distance_km" integer,
-	"user_id" uuid DEFAULT gen_random_uuid() NOT NULL,
-	"neutered" boolean DEFAULT false NOT NULL,
-	"min_age_months" real,
-	"max_age_months" real,
-	"user_search_preference_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"location" "geography" NOT NULL,
-	"location_display_name" text,
-	CONSTRAINT "user_search_preferences_user_id_key" UNIQUE("user_id")
-);
---> statement-breakpoint
-CREATE TABLE "swipes" (
-	"swiped_at" timestamp with time zone NOT NULL,
-	"rehomer_id" uuid NOT NULL,
-	"potential_adopter_id" uuid NOT NULL,
-	"swipe_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "animals" (
 	"name" varchar(200) NOT NULL,
 	"gender" varchar(50) NOT NULL,
@@ -411,9 +391,6 @@ ALTER TABLE "users" ADD CONSTRAINT "users_user_id_fkey" FOREIGN KEY ("user_id") 
 ALTER TABLE "users" ADD CONSTRAINT "users_user_type_id_fkey" FOREIGN KEY ("user_type_id") REFERENCES "public"."usertypes"("user_type_id") ON DELETE no action ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "fk_messages_users" FOREIGN KEY ("sender_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "messages" ADD CONSTRAINT "messages_conversation_id_fkey" FOREIGN KEY ("conversation_id") REFERENCES "public"."conversations"("conversation_id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "user_search_preferences" ADD CONSTRAINT "fk_user_search_preferences_users" FOREIGN KEY ("user_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "swipes" ADD CONSTRAINT "fk_swipes_adopterid_users" FOREIGN KEY ("potential_adopter_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "swipes" ADD CONSTRAINT "fk_swipes_users" FOREIGN KEY ("rehomer_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "animals" ADD CONSTRAINT "fk_animals_rehomerid__users" FOREIGN KEY ("rehomer_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "animals_adopted" ADD CONSTRAINT "animals_adopted_animal_id_fkey" FOREIGN KEY ("animal_id") REFERENCES "public"."animals"("animal_id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "animals_adopted" ADD CONSTRAINT "fk_animals_adopted_rehomerid__users" FOREIGN KEY ("rehomer_id") REFERENCES "public"."users"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

@@ -817,58 +817,6 @@ export const messages = pgTable(
   ]
 );
 
-export const userSearchPreferences = pgTable(
-  'user_search_preferences',
-  {
-    gender: varchar({ length: 50 }),
-    maxDistanceKm: integer('max_distance_km'),
-    userId: uuid('user_id').defaultRandom().notNull(),
-    neutered: boolean().default(false).notNull(),
-    minAgeMonths: real('min_age_months'),
-    maxAgeMonths: real('max_age_months'),
-    userSearchPreferenceId: uuid('user_search_preference_id')
-      .defaultRandom()
-      .primaryKey()
-      .notNull(),
-    // PostGIS geography point
-    location: geometry('location', { type: 'Point', srid: 4326 }).notNull(),
-    locationDisplayName: text('location_display_name')
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.userId],
-      foreignColumns: [users.userId],
-      name: 'fk_user_search_preferences_users'
-    }),
-    unique('user_search_preferences_user_id_key').on(table.userId)
-  ]
-);
-
-export const swipes = pgTable(
-  'swipes',
-  {
-    swipedAt: timestamp('swiped_at', {
-      withTimezone: true,
-      mode: 'string'
-    }).notNull(),
-    rehomerId: uuid('rehomer_id').notNull(),
-    potentialAdopterId: uuid('potential_adopter_id').notNull(),
-    swipeId: uuid('swipe_id').defaultRandom().primaryKey().notNull()
-  },
-  (table) => [
-    foreignKey({
-      columns: [table.potentialAdopterId],
-      foreignColumns: [users.userId],
-      name: 'fk_swipes_adopterid_users'
-    }),
-    foreignKey({
-      columns: [table.rehomerId],
-      foreignColumns: [users.userId],
-      name: 'fk_swipes_users'
-    })
-  ]
-);
-
 export const animals = pgTable(
   'animals',
   {

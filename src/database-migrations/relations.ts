@@ -18,8 +18,6 @@ import {
   conversations,
   usertypes,
   messages,
-  userSearchPreferences,
-  swipes,
   animals,
   animalsAdopted,
   animalPhotos,
@@ -207,13 +205,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [usertypes.userTypeId]
   }),
   messages: many(messages),
-  userSearchPreferences: many(userSearchPreferences),
-  swipes_potentialAdopterId: many(swipes, {
-    relationName: 'swipes_potentialAdopterId_users_userId'
-  }),
-  swipes_rehomerId: many(swipes, {
-    relationName: 'swipes_rehomerId_users_userId'
-  }),
   animals: many(animals),
   animalsAdopteds: many(animalsAdopted),
   notifications: many(notifications)
@@ -231,29 +222,6 @@ export const messagesRelations = relations(messages, ({ one }) => ({
   conversation: one(conversations, {
     fields: [messages.conversationId],
     references: [conversations.conversationId]
-  })
-}));
-
-export const userSearchPreferencesRelations = relations(
-  userSearchPreferences,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [userSearchPreferences.userId],
-      references: [users.userId]
-    })
-  })
-);
-
-export const swipesRelations = relations(swipes, ({ one }) => ({
-  user_potentialAdopterId: one(users, {
-    fields: [swipes.potentialAdopterId],
-    references: [users.userId],
-    relationName: 'swipes_potentialAdopterId_users_userId'
-  }),
-  user_rehomerId: one(users, {
-    fields: [swipes.rehomerId],
-    references: [users.userId],
-    relationName: 'swipes_rehomerId_users_userId'
   })
 }));
 

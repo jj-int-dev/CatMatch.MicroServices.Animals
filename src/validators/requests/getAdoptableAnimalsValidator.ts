@@ -16,7 +16,7 @@ const getAdoptableAnimalsValidations = z
   .object({
     gender: z
       .enum(['Male', 'Female'], `Invalid gender. 'Male' or 'Female' accepted.`)
-      .optional(),
+      .nullable(),
     minAgeWeeks: z
       .number()
       .int()
@@ -34,17 +34,17 @@ const getAdoptableAnimalsValidations = z
       .number()
       .min(-90)
       .max(90, 'Latitude must be between -90 and 90')
-      .optional(),
+      .nullable(),
     longitude: z
       .number()
       .min(-180)
       .max(180, 'Longitude must be between -180 and 180')
-      .optional(),
+      .nullable(),
     locationSource: z.enum(
       ['client-ip', 'client-current-location', 'client-custom-location'],
       'Invalid location source'
     ),
-    locationDetails: z.string().optional(),
+    locationDetails: z.string().nullable(),
     maxDistanceMeters: z
       .number()
       .min(1000, 'Invalid minimum distance')
@@ -57,7 +57,7 @@ const getAdoptableAnimalsValidations = z
     (data) =>
       !(
         data.locationSource === 'client-custom-location' &&
-        data.locationDetails === undefined
+        data.locationDetails == null
       ),
     {
       message:
@@ -70,7 +70,7 @@ const getAdoptableAnimalsValidations = z
       !(
         (data.locationSource === 'client-current-location' ||
           data.locationSource === 'client-custom-location') &&
-        (data.latitude === undefined || data.longitude === undefined)
+        (data.latitude == null || data.longitude == null)
       ),
     {
       message:

@@ -103,7 +103,7 @@ export async function getAdoptableAnimalsAction(
       locationDisplay:
         (animalFilters.locationSource === 'client-ip' ||
           animalFilters.locationSource === 'client-custom-location') &&
-        Object.hasOwn(animalFilters, 'locationDetails')
+        animalFilters.locationDetails
           ? animalFilters.locationDetails!
           : null,
       pagination: {
