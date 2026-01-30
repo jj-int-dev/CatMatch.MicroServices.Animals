@@ -19,7 +19,7 @@ export async function getAdoptableAnimalAction(
   if (success) {
     if (data) {
       console.log(
-        `Successfully retrieved adoptable animal with animalId ${animalId}\nExiting GetAnimalAction ...`
+        `Successfully retrieved adoptable animal with animalId ${animalId}\nExiting GetAdoptableAnimalAction ...`
       );
       return toAdoptableAnimal(data);
     } else {
