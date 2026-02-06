@@ -8,6 +8,13 @@
       "when": 1765767239033,
       "tag": "0000_wild_betty_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770057512499,
+      "tag": "0001_high_medusa",
+      "breakpoints": true
     }
   ]
 }

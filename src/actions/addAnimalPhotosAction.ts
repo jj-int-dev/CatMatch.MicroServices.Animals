@@ -1,5 +1,4 @@
 import { addAnimalPhotosCommand } from '../commands/addAnimalPhotosCommand';
-import HttpResponseError from '../dtos/httpResponseError';
 
 /**
  * Adds photos for an existing animal

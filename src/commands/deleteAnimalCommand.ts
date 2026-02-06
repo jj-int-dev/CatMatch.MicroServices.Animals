@@ -1,7 +1,7 @@
 import { ANIMAL_PICTURES_STORAGE_BUCKET } from '../utils/constants';
 import { supabase } from '../utils/supabaseClient';
 import { db } from '../utils/databaseClient';
-import { animalPhotos, animals } from '../database-migrations/schema';
+import { animals } from '../database-migrations/schema';
 import { and, eq } from 'drizzle-orm';
 
 /**
@@ -23,13 +23,9 @@ export default async function (
       .remove(data.map((file) => `${animalId}/${file.name}`));
   }
 
-  // delete animal photos and  animal from db
-  await db.transaction(async (tx) => {
-    await db.delete(animalPhotos).where(eq(animalPhotos.animalId, animalId));
-    await db
-      .delete(animals)
-      .where(
-        and(eq(animals.animalId, animalId), eq(animals.rehomerId, userId))
-      );
-  });
+  // delete animal photos and animal from db. foreign key cascading will
+  // cause any animal photos with this animal's ID to be deleted
+  await db
+    .delete(animals)
+    .where(and(eq(animals.animalId, animalId), eq(animals.rehomerId, userId)));
 }

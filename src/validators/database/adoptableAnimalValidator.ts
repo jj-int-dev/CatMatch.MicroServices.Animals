@@ -11,6 +11,7 @@ export const adoptableAnimalValidator = z
     description: z.string().min(1),
     addressLatitude: z.number(),
     addressLongitude: z.number(),
+    rehomerId: z.string().min(1),
     animalPhotos: animalPhotosValidator
   })
   .nullable();

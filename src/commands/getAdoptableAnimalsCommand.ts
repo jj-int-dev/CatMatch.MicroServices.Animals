@@ -80,6 +80,7 @@ export async function getAdoptableAnimalsCommand(
         a.description,
         ST_Y(a.address::geometry) AS addressLatitude,
         ST_X(a.address::geometry) AS addressLongitude,
+        a.rehomer_id AS rehomerId,
         json_agg(
           json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
           ORDER BY ap.order ASC
@@ -95,7 +96,7 @@ export async function getAdoptableAnimalsCommand(
         ${animalFilters.maxDistanceMeters}
       )
       LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
-      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address
+      GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address, a.rehomer_id
       ORDER BY distanceMeters ASC
     `);
 
