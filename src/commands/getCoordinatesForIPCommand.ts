@@ -1,6 +1,7 @@
 import { axiosGeoapifyClient } from '../utils/axiosClient';
 import config from '../config/config';
-import { cache } from '../utils/cacheClient';
+import { getFromCache, addToCache } from '../utils/cacheClient';
+import { isPublicIPv4Command } from './isPublicIPv4Command';
 import * as z from 'zod';
 
 const coordinatesValidator = z.object({
@@ -25,8 +26,27 @@ export default async function (
   ipAddress: string
 ): Promise<CoordinatesSchema | null> {
   try {
+    // Geoapify doesn't support IP geolocation for localhost, return default location
+    if (config.NODE_ENV === 'development') {
+      return {
+        city: { name: 'Dallas' },
+        location: {
+          latitude: 32.4963584,
+          longitude: -96.8884422
+        }
+      };
+    }
+
+    // Geoapify IP geolocation doesn't work with certain IP addresses
+    if (!isPublicIPv4Command(ipAddress)) {
+      return null;
+    }
+
     const cacheKey = `coordsForIP:${ipAddress}`;
-    const cachedCoords = await cache.get<CoordinatesSchema>(cacheKey);
+    const cachedCoords = await getFromCache<CoordinatesSchema>(
+      cacheKey,
+      coordinatesValidator
+    );
 
     if (cachedCoords) return cachedCoords;
 
@@ -35,18 +55,21 @@ export default async function (
       { params: { ip: ipAddress } }
     );
 
-    const { success, error, data } =
-      coordinatesValidator.safeParse(locationData);
+    const { success, error, data } = coordinatesValidator.safeParse(
+      locationData.data
+    );
 
     if (!success) {
-      throw new Error(error.issues.map((issue) => issue.message).join('\n'));
+      throw new Error(error.issues.map((i) => i.message).join('\n'));
     }
 
-    await cache.set<CoordinatesSchema>(cacheKey, data, { ex: 86400 }); //24 hrs
+    await addToCache(cacheKey, data);
     return data;
   } catch (error) {
     console.error(
-      `Error fetching coordinates for IP address ${ipAddress}: ${(error as Error).message}`
+      `Error fetching coordinates for IP address ${ipAddress}: ${
+        (error as Error).message
+      }`
     );
     return null;
   }

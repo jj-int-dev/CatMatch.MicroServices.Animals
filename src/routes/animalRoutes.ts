@@ -234,8 +234,8 @@ router.post(
   getAdoptableAnimalsValidator,
   async (req: Request, res: Response) => {
     try {
-      const { animals, pagination } = await getAdoptableAnimalsAction(req);
-      return res.status(200).json({ animals, pagination });
+      const result = await getAdoptableAnimalsAction(req);
+      return res.status(200).json(result);
     } catch (error) {
       return getErrorResponseJson(error, res);
     }

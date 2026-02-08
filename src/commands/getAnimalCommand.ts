@@ -35,9 +35,9 @@ export async function getAnimalCommand(
       json_agg(
         json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
         ORDER BY ap.order ASC
-      ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animalPhotos
+      ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animal_photos
     FROM animals a
-    LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
+    LEFT JOIN animal_photos ap ON a.animal_id = ap.animal_id
     WHERE a.rehomer_id = ${userId} AND a.animal_id = ${animalId}
     GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.address_display_name, a.description, a.created_at, a.address;
   `);

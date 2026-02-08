@@ -7,6 +7,7 @@ import {
   type AdoptableAnimalsSchema
 } from '../validators/database/adoptableAnimalsValidator';
 import type { GetAdoptableAnimalsSchema } from '../validators/requests/getAdoptableAnimalsValidator';
+import { getFromCache, addToCache } from '../utils/cacheClient';
 
 export type GetAdoptableAnimalsCommandResponse = Promise<{
   success: boolean;
@@ -53,8 +54,10 @@ export async function getAdoptableAnimalsCommand(
     const cacheKey = `animalsForGeohash:${geohash}:${animalFilters.maxDistanceMeters}`;
     const offset = (page - 1) * pageSize;
 
-    const cachedNearbyAnimals =
-      await cache.get<AdoptableAnimalsSchema>(cacheKey);
+    const cachedNearbyAnimals = await getFromCache<AdoptableAnimalsSchema>(
+      cacheKey,
+      adoptableAnimalsValidator
+    );
 
     if (cachedNearbyAnimals) {
       // filter the animals and then get the page of animals that was requested
@@ -84,18 +87,18 @@ export async function getAdoptableAnimalsCommand(
         json_agg(
           json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
           ORDER BY ap.order ASC
-        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animalPhotos,
+        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animal_photos,
         ST_DISTANCE(
           a.address,
-          ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}, 4326)::geography
+          ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}), 4326)::geography
         ) as distanceMeters
       FROM animals a
+      LEFT JOIN animal_photos ap ON a.animal_id = ap.animal_id
       WHERE ST_DWithin(
         a.address,
         ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}), 4326)::geography,
         ${animalFilters.maxDistanceMeters}
       )
-      LEFT JOIN animalPhotos ap ON a.animal_id = ap.animal_id
       GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address, a.rehomer_id
       ORDER BY distanceMeters ASC
     `);
@@ -104,9 +107,11 @@ export async function getAdoptableAnimalsCommand(
 
     if (validationResult.success) {
       // cache the animals (10 minutes)
-      await cache.set<AdoptableAnimalsSchema>(cacheKey, validationResult.data, {
-        ex: 600
-      });
+      await addToCache<AdoptableAnimalsSchema>(
+        cacheKey,
+        validationResult.data,
+        600
+      );
 
       // filter the animals and then get the page of animals that was requested
       const animals = filterAnimals(validationResult.data, animalFilters);
