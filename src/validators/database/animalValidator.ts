@@ -15,6 +15,6 @@ export const animalValidator = z
     addressLongitude: z.number(),
     animalPhotos: animalPhotosValidator
   })
-  .nullish();
+  .nullable();
 
 export type AnimalSchema = z.infer<typeof animalValidator>;

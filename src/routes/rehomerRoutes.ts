@@ -315,7 +315,7 @@ router.get(
     try {
       const { userId, animalId } = req.params;
       const animal = await getAnimalAction(userId!, animalId!);
-      return res.status(200).json({ animal });
+      return res.status(200).json(animal);
     } catch (error) {
       return getErrorResponseJson(error, res);
     }
