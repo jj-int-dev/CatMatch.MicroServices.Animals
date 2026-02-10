@@ -17,7 +17,6 @@ export async function addAnimalCommand(
 
   // Convert address to PostGIS POINT geometry
   const { latitude, longitude } = animalData.address;
-  const point = `ST_MakePoint(${longitude}, ${latitude})`;
 
   // Insert the animal record
   const result = await db.execute(sql`
@@ -38,7 +37,7 @@ export async function addAnimalCommand(
       ${animalData.addressDisplayName},
       ${animalData.description},
       ${userId},
-      ST_SetSRID(${point}, 4326)::geography
+      ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4326)::geography
     )
     RETURNING *;
   `);
