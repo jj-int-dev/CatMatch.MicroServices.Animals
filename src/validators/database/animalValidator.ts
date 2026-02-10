@@ -10,7 +10,7 @@ export const animalValidator = z
     neutered: z.boolean(),
     addressDisplayName: z.string().min(1),
     description: z.string().min(1),
-    createdAt: z.iso.datetime(),
+    createdAt: z.coerce.date(),
     addressLatitude: z.number(),
     addressLongitude: z.number(),
     animalPhotos: animalPhotosValidator

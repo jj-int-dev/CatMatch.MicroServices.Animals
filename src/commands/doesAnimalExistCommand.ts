@@ -12,6 +12,6 @@ export default async function (
     SELECT animal_id FROM animals 
     WHERE animal_id = ${animalId} AND rehomer_id = ${userId}
   `);
-  const rows = (animalCheck as any).rows ?? [];
+  const rows = Array.isArray(animalCheck) ? animalCheck : [];
   return rows.length > 0;
 }

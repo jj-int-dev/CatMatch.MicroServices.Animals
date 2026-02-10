@@ -25,7 +25,9 @@ export async function addAnimalPhotosCommand(
   try {
     // First, verify the animal exists and belongs to the user
     if (!(await doesAnimalExistCommand(userId, animalId)))
-      throw new Error('Animal not found or does not belong to user');
+      throw new Error(
+        `Animal ${animalId} not found or does not belong to user ${userId}`
+      );
 
     animalExists = true;
 
