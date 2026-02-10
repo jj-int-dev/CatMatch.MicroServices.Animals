@@ -9,23 +9,32 @@ import { ANIMAL_PICTURES_STORAGE_BUCKET } from '../utils/constants';
  * Updates animal photos in storage and database
  * @param userId The ID of the user (rehomer) who owns the animal
  * @param animalId The ID of the animal to update photos for
- * @param files The new photos to replace existing ones
+ * @param files The new photos to add
+ * @param photoUrlsToDelete The URLs of existing photos to delete
  * @throws A {@link HttpResponseError} If an error occurred while updating the animal photos
  */
 export async function updateAnimalPhotosCommand(
   userId: string,
   animalId: string,
-  files: Express.Multer.File[]
+  files: Express.Multer.File[],
+  photoUrlsToDelete: string[] = []
 ): Promise<void> {
   console.log('Entering updateAnimalPhotosCommand...');
+  console.log(`Photos to delete: ${JSON.stringify(photoUrlsToDelete)}`);
+  console.log(`New files to upload: ${files.length}`);
 
-  // Backup original photos before making changes
+  // Backup for rollback in case of errors
   let originalPhotos: Array<{
     fileName: string;
     photoUrl: string;
     order: number;
   }> = [];
   const uploadedFiles: string[] = [];
+  const deletedPhotos: Array<{
+    fileName: string;
+    photoUrl: string;
+    order: number;
+  }> = [];
 
   try {
     // First, verify the animal exists and belongs to the user
@@ -33,32 +42,69 @@ export async function updateAnimalPhotosCommand(
       throw new Error('Animal not found or does not belong to user');
     }
 
-    // Get existing photos from database to backup
+    // Get all existing photos from database
     const existingPhotosResult = await db.execute(sql`
       SELECT photo_url, "order" FROM animal_photos 
       WHERE animal_id = ${animalId}
       ORDER BY "order" ASC
     `);
 
-    // Extract file names from photo URLs for backup
+    // Backup all existing photos
     for (const row of existingPhotosResult) {
       const photoUrl = row['photo_url'] as string;
       const order = row['order'] as number;
-
-      // Extract file name from URL (assuming Supabase storage URL pattern)
       const fileName = extractFileNameFromUrl(photoUrl);
       if (fileName) {
         originalPhotos.push({ fileName, photoUrl, order });
       }
     }
 
-    // Delete existing photos from database (we'll re-insert new ones)
-    await db.execute(sql`
-      DELETE FROM animal_photos 
+    // Step 1: Delete photos marked for deletion
+    for (const photoUrlToDelete of photoUrlsToDelete) {
+      const fileName = extractFileNameFromUrl(photoUrlToDelete);
+      if (!fileName) {
+        console.warn(
+          `Could not extract filename from URL: ${photoUrlToDelete}`
+        );
+        continue;
+      }
+
+      // Delete from database
+      await db.execute(sql`
+        DELETE FROM animal_photos 
+        WHERE animal_id = ${animalId} AND photo_url = ${photoUrlToDelete}
+      `);
+
+      // Delete from storage
+      const { error } = await supabase.storage
+        .from(ANIMAL_PICTURES_STORAGE_BUCKET)
+        .remove([fileName]);
+
+      if (error) {
+        throw new Error(`Failed to delete photo ${fileName}: ${error.message}`);
+      }
+
+      // Track deleted photos for potential rollback
+      const deletedPhoto = originalPhotos.find(
+        (p) => p.photoUrl === photoUrlToDelete
+      );
+      if (deletedPhoto) {
+        deletedPhotos.push(deletedPhoto);
+      }
+
+      console.log(`Deleted photo: ${fileName}`);
+    }
+
+    // Step 2: Get remaining photos to determine next order value
+    const remainingPhotosResult = await db.execute(sql`
+      SELECT photo_url, "order" FROM animal_photos 
       WHERE animal_id = ${animalId}
+      ORDER BY "order" ASC
     `);
 
-    // Upload new files to Supabase storage and insert into database
+    let nextOrder = remainingPhotosResult.length;
+
+    // Step 3: Upload new files
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       if (!file) continue;
@@ -97,29 +143,12 @@ export async function updateAnimalPhotosCommand(
         ) VALUES (
           ${animalId},
           ${urlData.publicUrl},
-          ${i}
+          ${nextOrder}
         )
       `);
-    }
 
-    // If successful, delete old photos from storage
-    for (const photo of originalPhotos) {
-      try {
-        const result = await supabase.storage
-          .from(ANIMAL_PICTURES_STORAGE_BUCKET)
-          .remove([photo.fileName]);
-        if (result.error) {
-          console.error(
-            `Failed to delete old file ${photo.fileName}:`,
-            result.error
-          );
-          // Continue with cleanup even if some deletions fail
-        } else {
-          console.log(`Deleted old photo: ${photo.fileName}`);
-        }
-      } catch (error) {
-        console.error(`Error deleting old file ${photo.fileName}:`, error);
-      }
+      console.log(`Uploaded new photo: ${fileName} with order ${nextOrder}`);
+      nextOrder++;
     }
 
     console.log(`Successfully updated photos for animal with ID ${animalId}`);
@@ -133,8 +162,8 @@ export async function updateAnimalPhotosCommand(
     // 1. Clean up any newly uploaded files
     await cleanupUploadedFiles(uploadedFiles);
 
-    // 2. Restore original photos in database
-    await restoreOriginalPhotos(animalId, originalPhotos);
+    // 2. Restore deleted photos
+    await restoreDeletedPhotos(animalId, deletedPhotos);
 
     throw new HttpResponseError(500, baseErrorMsg);
   }
@@ -180,21 +209,17 @@ async function cleanupUploadedFiles(files: string[]): Promise<void> {
 }
 
 /**
- * Restore original photos to database
+ * Restore deleted photos to database (rollback on error)
  */
-async function restoreOriginalPhotos(
+async function restoreDeletedPhotos(
   animalId: string,
-  originalPhotos: Array<{ fileName: string; photoUrl: string; order: number }>
+  deletedPhotos: Array<{ fileName: string; photoUrl: string; order: number }>
 ): Promise<void> {
-  try {
-    // First, clear any photos that might have been inserted
-    await db.execute(sql`
-      DELETE FROM animal_photos 
-      WHERE animal_id = ${animalId}
-    `);
+  if (deletedPhotos.length === 0) return;
 
-    // Then re-insert original photos
-    for (const photo of originalPhotos) {
+  try {
+    // Re-insert deleted photos
+    for (const photo of deletedPhotos) {
       await db.execute(sql`
         INSERT INTO animal_photos (
           animal_id,
@@ -205,13 +230,16 @@ async function restoreOriginalPhotos(
           ${photo.photoUrl},
           ${photo.order}
         )
+        ON CONFLICT DO NOTHING
       `);
     }
 
-    console.log(`Restored original photos for animal: ${animalId}`);
+    console.log(
+      `Restored ${deletedPhotos.length} deleted photos for animal: ${animalId}`
+    );
   } catch (error) {
     console.error(
-      `Failed to restore original photos for animal ${animalId}:`,
+      `Failed to restore deleted photos for animal ${animalId}:`,
       error
     );
   }

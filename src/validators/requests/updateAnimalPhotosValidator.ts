@@ -64,10 +64,42 @@ export function updateAnimalPhotosValidator(
     // Check if files were uploaded - allow empty array (0 photos)
     const files = Array.isArray(req.files) ? req.files : [];
 
-    // If no files, that's OK - animal can have 0 photos
-    if (files.length === 0) {
+    // Extract and validate photoUrlsToDelete from FormData
+    let photoUrlsToDelete: string[] = [];
+    if (req.body.photoUrlsToDelete) {
+      try {
+        const parsed = JSON.parse(req.body.photoUrlsToDelete);
+        if (Array.isArray(parsed)) {
+          // Validate each URL is a string
+          for (const url of parsed) {
+            if (typeof url !== 'string') {
+              return res.status(400).json({
+                message: 'photoUrlsToDelete must contain only strings'
+              });
+            }
+          }
+          photoUrlsToDelete = parsed;
+        } else {
+          return res.status(400).json({
+            message: 'photoUrlsToDelete must be an array'
+          });
+        }
+      } catch (error) {
+        return res.status(400).json({
+          message: 'Invalid photoUrlsToDelete format. Must be valid JSON array.'
+        });
+      }
+    }
+
+    // Store photoUrlsToDelete in req.body for action to access
+    req.body.photoUrlsToDelete = photoUrlsToDelete;
+
+    // If no files and no deletions, that's still OK
+    if (files.length === 0 && photoUrlsToDelete.length === 0) {
       return next();
     }
+
+    // Validate file count doesn't exceed limit
     if (files.length > 5) {
       return res.status(400).json({
         message: 'Maximum 5 photos allowed'

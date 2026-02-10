@@ -609,10 +609,12 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const { userId, animalId } = req.params;
+      const photoUrlsToDelete = req.body.photoUrlsToDelete || [];
       await updateAnimalPhotosAction(
         userId!,
         animalId!,
-        Array.isArray(req.files) ? req.files : []
+        Array.isArray(req.files) ? req.files : [],
+        photoUrlsToDelete
       );
       return res.sendStatus(200);
     } catch (error) {
