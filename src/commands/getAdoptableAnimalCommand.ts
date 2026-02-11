@@ -19,19 +19,19 @@ export async function getAdoptableAnimalCommand(
 ): GetAdoptableAnimalCommandResponse {
   const records = await db.execute(sql`
     SELECT
-      a.animal_id AS animalId,
+      a.animal_id AS "animalId",
       a.name,
       a.gender,
-      a.age_in_weeks AS ageInWeeks,
+      a.age_in_weeks AS "ageInWeeks",
       a.neutered,
       a.description,
-      ST_Y(a.address::geometry) AS addressLatitude,
-      ST_X(a.address::geometry) AS addressLongitude,
-      a.rehomer_id AS rehomerId,
+      ST_Y(a.address::geometry) AS "addressLatitude",
+      ST_X(a.address::geometry) AS "addressLongitude",
+      a.rehomer_id AS "rehomerId",
       json_agg(
         json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
         ORDER BY ap.order ASC
-      ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animal_photos
+      ) FILTER (WHERE ap.photo_url IS NOT NULL) AS "animalPhotos"
     FROM animals a
     LEFT JOIN animal_photos ap ON a.animal_id = ap.animal_id
     WHERE a.animal_id = ${animalId}

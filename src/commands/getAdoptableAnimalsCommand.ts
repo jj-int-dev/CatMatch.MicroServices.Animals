@@ -75,23 +75,23 @@ export async function getAdoptableAnimalsCommand(
     // Get all animals within maxDistanceKm kilometers of the location indicated by animalFilters
     const records = await db.execute(sql`
       SELECT
-        a.animal_id AS animalId,
+        a.animal_id AS "animalId",
         a.name,
         a.gender,
-        a.age_in_weeks AS ageInWeeks,
+        a.age_in_weeks AS "ageInWeeks",
         a.neutered,
         a.description,
-        ST_Y(a.address::geometry) AS addressLatitude,
-        ST_X(a.address::geometry) AS addressLongitude,
-        a.rehomer_id AS rehomerId,
+        ST_Y(a.address::geometry) AS "addressLatitude",
+        ST_X(a.address::geometry) AS "addressLongitude",
+        a.rehomer_id AS "rehomerId",
         json_agg(
           json_build_object('photoUrl', ap.photo_url, 'order', ap.order)
           ORDER BY ap.order ASC
-        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS animal_photos,
+        ) FILTER (WHERE ap.photo_url IS NOT NULL) AS "animalPhotos",
         ST_DISTANCE(
           a.address,
           ST_SetSRID(ST_MakePoint(${animalFilters.longitude}, ${animalFilters.latitude}), 4326)::geography
-        ) as distanceMeters
+        ) as "distanceMeters"
       FROM animals a
       LEFT JOIN animal_photos ap ON a.animal_id = ap.animal_id
       WHERE ST_DWithin(
@@ -100,10 +100,15 @@ export async function getAdoptableAnimalsCommand(
         ${animalFilters.maxDistanceMeters}
       )
       GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address, a.rehomer_id
-      ORDER BY distanceMeters ASC
+      ORDER BY "distanceMeters" ASC
     `);
-
+    console.log('records before validation:');
+    console.log(records);
     const validationResult = adoptableAnimalsValidator.safeParse(records);
+    if (validationResult.error) {
+      console.log('validation errors:');
+      console.log(validationResult.error.issues);
+    }
 
     if (validationResult.success) {
       // cache the animals (10 minutes)
