@@ -102,13 +102,7 @@ export async function getAdoptableAnimalsCommand(
       GROUP BY a.animal_id, a.name, a.gender, a.age_in_weeks, a.neutered, a.description, a.address, a.rehomer_id
       ORDER BY "distanceMeters" ASC
     `);
-    console.log('records before validation:');
-    console.log(records);
     const validationResult = adoptableAnimalsValidator.safeParse(records);
-    if (validationResult.error) {
-      console.log('validation errors:');
-      console.log(validationResult.error.issues);
-    }
 
     if (validationResult.success) {
       // cache the animals (10 minutes)
