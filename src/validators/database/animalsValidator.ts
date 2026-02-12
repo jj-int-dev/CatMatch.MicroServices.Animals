@@ -10,7 +10,7 @@ export const animalsValidator = z.array(
     neutered: z.boolean(),
     addressDisplayName: z.string().min(1),
     description: z.string().min(1),
-    createdAt: z.coerce.date(),
+    createdAt: z.string(), // PostgreSQL timestamp format: 2026-02-12 01:38:25.815112+00
     addressLatitude: z.number(),
     addressLongitude: z.number(),
     animalPhotos: animalPhotosValidator
