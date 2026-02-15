@@ -39,7 +39,6 @@ export default async function (
 
     // Geoapify IP geolocation doesn't work with certain IP addresses
     if (!isPublicIPv4Command(ipAddress)) {
-      console.log('not a public IPv4 address, skipping geolocation');
       return null;
     }
 
@@ -55,8 +54,7 @@ export default async function (
       config.GEOAPIFY_IP_GEOLOCATION_API_URL_PATH,
       { params: { ip: ipAddress } }
     );
-    console.log('axios response:');
-    console.log({ ...locationData });
+
     const { success, error, data } = coordinatesValidator.safeParse(
       locationData.data
     );
@@ -68,8 +66,6 @@ export default async function (
     await addToCache(cacheKey, data);
     return data;
   } catch (error) {
-    console.log('full err0r:');
-    console.log(error);
     console.error(
       `Error fetching coordinates for IP address ${ipAddress}: ${
         (error as Error).message
