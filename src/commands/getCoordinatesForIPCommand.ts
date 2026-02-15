@@ -37,11 +37,6 @@ export default async function (
       };
     }
 
-    // Geoapify IP geolocation doesn't work with certain IP addresses
-    if (!isPublicIPv4Command(ipAddress)) {
-      return null;
-    }
-
     const cacheKey = `coordsForIP:${ipAddress}`;
     const cachedCoords = await getFromCache<CoordinatesSchema>(
       cacheKey,
